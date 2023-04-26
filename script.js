@@ -4,11 +4,13 @@ CANVAS.width = 800;
 CANVAS.height = 500;
 const CTX = CANVAS.getContext("2d");
 const BUBBLE_POP1 = document.createElement("audio");
-BUBBLE_POP1.src = "bubbles-single1.wav";
-const BUUBLE_POP2 = document.createElement("audio");
-BUUBLE_POP2.src = "bubbles-single2.wav";
+BUBBLE_POP1.src = "audio/bubbles-single1.wav";
+const BUBBLE_POP2 = document.createElement("audio");
+BUBBLE_POP2.src = "audio/bubbles-single2.wav";
 const BUBBLE_IMAGE = new Image()
 BUBBLE_IMAGE.src = 'img/bubble_pop_frame_01.png';
+const ENEMY_IMAGE = new Image();
+ENEMY_IMAGE.src = 'img/enemy1.png';
 
 
 const BG = {
@@ -22,7 +24,8 @@ const BG = {
 let gameSpeed = 1;
 let score = 0;
 let gameFrame = 0;
-CTX.font = "50px Georgia";
+CTX.font = "35px Georgia";
+let gameOver = false;
 // Mouse Interactivity
 let canvasPosition = CANVAS.getBoundingClientRect();
 
@@ -78,10 +81,10 @@ class Player {
       CTX.lineTo(MOUSE_TRACKING.x, MOUSE_TRACKING.y);
       CTX.stroke();
     }
-    CTX.fillStyle = "red";
-    CTX.beginPath();
-    CTX.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-    CTX.fill();
+    // CTX.fillStyle = "red";
+    // CTX.beginPath();
+    // CTX.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    // CTX.fill();
     CTX.closePath();
     CTX.fillRect(this.x, this.y, this.radius, 10);
     CTX.save();
@@ -163,7 +166,7 @@ function bubblesHandler() {
         if (bubblesArray[i].sound == "sound1") {
           BUBBLE_POP1.play();
         } else {
-          BUUBLE_POP2.play();
+          BUBBLE_POP2.play();
         }
         score++;
         bubblesArray[i].counted = true;
@@ -191,17 +194,75 @@ const backgroundHandler = () => {
   CTX.drawImage(background, BG.x2, BG.y, BG.width, BG.height);
 };
 
+class Enemy {
+  constructor() {
+  this.x = CANVAS.width + 200;
+  this.y = Math.random() * (CANVAS.height -150) + 90;
+  this.radius = 60;
+  this.speed = Math.random() * 2 + 2;
+  this.frame = 0;
+  this.frameX = 0;
+  this.frameY = 0;
+  this.spriteWidth = 418;
+  this.spriteHeight = 397;
+  }
+  draw() {
+  // CTX.fillStyle = 'yellow';
+  // CTX.beginPath();
+  // CTX.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+  // CTX.fill();
+  CTX.drawImage(ENEMY_IMAGE,this.frameX * this.spriteWidth, this.frameY * this.spriteHeight, this.spriteWidth, this.spriteHeight, this.x - 60, this.y - 70, this.spriteWidth / 3, this.spriteHeight / 3);
+  }
+  update() {
+    this.x -= this.speed;
+    if (this.x < 0 - this.radius * 2) {
+      this.x = CANVAS.width + 200;
+      this.y = Math.random()* (CANVAS.height - 150) + 90;
+      this.speed = Math.random() * 2 + 2;
+    }
+    if (gameFrame % 5 == 0) {
+      this.frame++;
+      if (this.frame >= 12) this.frame = 0;
+      if (this.frame == 3 || this.frame == 7 || this.frame == 11) {
+        this.frameX = 0;
+      } else {
+        this.frameX++;
+      }
+    }
+    const DX = this.x - PLAYER.x;
+    const DY = this.y - PLAYER.y;
+    const DISTANCE = Math.sqrt(DX * DX + DY * DY);
+    if (DISTANCE < this.radius + PLAYER.radius) {
+      GAME_OVER_HANDLER();
+    }
+  }
+}
+
+
+const ENEMY_1 = new Enemy();
+const ENEMY_HANDLER = () => {
+  ENEMY_1.draw();
+  ENEMY_1.update();
+}
+
+const GAME_OVER_HANDLER = () => {
+  CTX.fillStyle = 'white';
+  CTX.fillText(`GAME OVER! TOU REACHED SCORE: ${score}`, 70, 250);
+  gameOver = true;
+}
+
 // Animation
 function Animate() {
   CTX.clearRect(0, 0, CANVAS.width, CANVAS.height);
   backgroundHandler();
   bubblesHandler();
+  ENEMY_HANDLER();
   PLAYER.update();
   PLAYER.draw();
   CTX.fillStyle = "black";
   CTX.fillText(`Score: ${score}`, 10, 50);
   gameFrame++;
-  requestAnimationFrame(Animate);
+  if (!gameOver) requestAnimationFrame(Animate);
 }
 
 Animate();
