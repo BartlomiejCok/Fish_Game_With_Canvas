@@ -3,6 +3,12 @@ const CANVAS = document.querySelector('#canvas1');
 CANVAS.width = 800;
 CANVAS.height = 500;
 const CTX = CANVAS.getContext('2d');
+const bubblePop1 = document.createElement('audio');
+bubblePop1.src = 'bubbles-single1.wav';
+const bubblePop2 = document.createElement('audio');
+bubblePop2.src = 'bubbles-single2.wav';
+
+
 
 let score = 0;
 let gameFrame = 0;
@@ -20,14 +26,16 @@ CANVAS.addEventListener('mousedown', function(event){
 MOUSE_TRACKING.click = true;
 MOUSE_TRACKING.x = event.x - canvasPosition.left;
 MOUSE_TRACKING.y = event.y - canvasPosition.top;
-console.log(MOUSE_TRACKING.x, MOUSE_TRACKING.y);
 });
 CANVAS.addEventListener('mouseup', function() {
   MOUSE_TRACKING.click = false;
 });
 
 // Player
-
+const PLAYER_LEFT = new Image();
+PLAYER_LEFT.src = 'img/fish_swim_left.png';
+const PLAYER_RIGHT = new Image();
+PLAYER_RIGHT.src = 'img/fish_swim_right.png';
 class Player {
   constructor() {
     this.x = CANVAS.width/2;
@@ -43,11 +51,13 @@ class Player {
   update() {
     const DX = this.x - MOUSE_TRACKING.x;
     const DY = this.y - MOUSE_TRACKING.y;
+    let theta = Math.atan2(DY, DX);
+    this.angle = theta;
     if(MOUSE_TRACKING.x != this.x) {
-      this.x -= DX/30;
+      this.x -= DX/20;
     }
     if(MOUSE_TRACKING.y != this.y) {
-      this.y -= DY/30;
+      this.y -= DY/20;
     }
   }
   draw() {
@@ -64,15 +74,86 @@ class Player {
     CTX.fill();
     CTX.closePath();
     CTX.fillRect(this.x,this.y,this.radius,10);
+    CTX.save();
+    CTX.translate(this.x,this.y);
+    CTX.rotate(this.angle);
+    if(this.x >= MOUSE_TRACKING.x) {
+      CTX.drawImage(PLAYER_LEFT, this.frameX * this.spriteWidth, this.frameY * this.spriteHeight, this.spriteWidth, this.spriteHeight, 0 - 60, 0 - 45, this.spriteWidth/4, this.spriteHeight/4);
+    } else {
+      CTX.drawImage(PLAYER_RIGHT, this.frameX * this.spriteWidth, this.frameY * this.spriteHeight, this.spriteWidth, this.spriteHeight, 0 - 60, 0 - 45, this.spriteWidth/4, this.spriteHeight/4);
+    }
+    CTX.restore();
   }
 }
 const PLAYER = new Player();
 
+const bubblesArray =  [];
+
+class Bubble {
+  constructor() {
+    this.x = Math.random() * CANVAS.width;
+    this.y = CANVAS.height + Math.random() * CANVAS.height;
+    this.radius = 50;
+    this.speed = Math.random() * 5+1;
+    this.distance;
+    this.counted = false;
+    this.sound = Math.random() <= 0.5 ? 'sound1' : 'sound2';
+  }
+  update() {
+    this.y -= this.speed;
+    const DX = this.x - PLAYER.x;
+    const DY = this.y - PLAYER.y;
+    this.distance = Math.sqrt(DX*DX + DY*DY);
+  }
+  draw() {
+    CTX.fillStyle = 'blue';
+    CTX.beginPath();
+    CTX.arc(this.x, this.y, this.radius,0, Math.PI *2);
+    CTX.fill();
+    CTX.closePath();
+    CTX.stroke();
+  }
+}
+
+function bubblesHandler() {
+  if(gameFrame % 50 == 0) {
+    bubblesArray.push(new Bubble());
+  }
+  for(let i = 0; i < bubblesArray.length; i++) {
+    bubblesArray[i].update();
+    bubblesArray[i].draw();
+  }
+  for(let i = 0; i < bubblesArray.length; i++) {
+    if(bubblesArray[i] < 0) {
+      bubblesArray.splice(i, 1);
+    }
+    if(bubblesArray[i].distance < bubblesArray[i].radius + PLAYER.radius) {
+      if(!bubblesArray[i].counted) {
+        if(bubblesArray[i].sound == 'sound1') {
+          bubblePop1.play();
+        } else {
+          bubblePop2.play();
+        }
+      score++;
+        bubblesArray[i].counted = true;
+        bubblesArray.splice(i, 1);
+      }
+    }
+  }
+}
+
 // Animation
 function Animate(){
+  CTX.clearRect(0,0, CANVAS.width, CANVAS.height);
+  bubblesHandler();
   PLAYER.update();
   PLAYER.draw();
+  CTX.fillStyle = 'black';
+  CTX.fillText(`Score: ${score}`, 10, 50);
+  gameFrame++;
   requestAnimationFrame(Animate);
 }
 
 Animate();
+
+
